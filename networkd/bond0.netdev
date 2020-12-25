@@ -3,4 +3,4 @@ Name=bond0
 Kind=bond
 
 [Bond]
-Mode=balance-rr
+Mode=802.3ad
