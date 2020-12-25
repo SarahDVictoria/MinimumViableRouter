@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+# this is something i spit out. it is not tested or guaranteed to work. use and modify at your own risk.
+# setup ssh keys prior to running this.
+# this makes use of apt to install one or more packages. make sure it's up to date.
+
+
+lazyerrorcheck () {
+    # $1 should be systemd module
+
+    if [[ $? -ne 0 ]]; then
+        echo "There was an error. Figure it out yourself."
+        if [[ -n $1 ]]; then journalctl -u $1 | tail; fi
+        exit 1
+    fi
+    return 0
+}
+
+
+# sshd
+echo "Do not forget to setup your SSH keys or you will lose access."
+cp sshd_config /etc/ssh/sshd_config
+systemctl restart sshd
+lazyerrorcheck sshd
+
+
+# sysctl
+cp sysctl.conf /etc/sysctl.conf
+sysctl -p -q
+lazyerrorcheck
+
+
+# systemd-networkd
+cp networkd/* /etc/systemd/network/
+systemctl stop networking
+systemctl disable networking
+systemctl enable systemd-networkd
+systemctl start systemd-networkd
+lazyerrorcheck systemd-networkd
+
+
+# iptables
+apt install -y iptables-persistent
+cp iptables.v4 /etc/iptables/rules.v4
+iptables-restore /etc/iptables/rules.v4
+lazyerrorcheck
+
+
+# systemd-resolved
+ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+cp resolved.conf /etc/systemd/
+systemctl enable systemd-resolved
+systemctl start systemd-resolved
+lazyerrorcheck systemd-resolved
+
+
+# if you got to this point without any errors, it's up to you to double-check everything.
